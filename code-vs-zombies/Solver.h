@@ -7,6 +7,8 @@ class Solver
 {
 public:
 	void processNextState(const State &state);
+private:
+	void simulate(State &state) const;
 };
 
 #endif // SOLVER_H

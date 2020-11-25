@@ -9,10 +9,13 @@ SOURCES += \
         main.cpp \
     Coord2.cpp \
     State.cpp \
-    Solver.cpp
+    Solver.cpp \
+    Unit.cpp \
+    Line2.cpp
 
 HEADERS += \
     Coord2.h \
     Unit.h \
     State.h \
-    Solver.h
+    Solver.h \
+    Line2.h
