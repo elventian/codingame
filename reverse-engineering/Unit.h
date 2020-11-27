@@ -17,4 +17,6 @@ protected:
 	int m_id;
 };
 
+typedef std::list<Unit> UnitsList;
+
 #endif // UNIT_H

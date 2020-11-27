@@ -17,6 +17,10 @@ public:
 	}
 	
 	bool read(std::istream &in);
+	const Map *map() const { return m_map; }
+	const Unit &unit() const { return m_unit; }
+	const CoordsSet &cellsToCheck() const { return m_needCheck; }
+	const UnitsList &enemies() const { return m_enemies; }
 	
 protected:
 	void clear();
@@ -24,7 +28,10 @@ protected:
 	int m_unitsNum = 0;
 	Map *m_map;
 	Unit m_unit;
-	std::list<Unit> m_enemies;
+	UnitsList m_enemies;
+	CoordsSet m_needCheck;
+	CoordsSet m_checked;
+	CoordsSet m_empty;
 };
 
 #endif // STATE_H
