@@ -25,6 +25,7 @@ HEADERS += \
     ../grid2d/Field.h \
     ../grid2d/Cell.h \
     ../grid2d/Direction.h \
-    ../grid2d/Contour.h
+    ../grid2d/Contour.h \
+    Action.h
 
 INCLUDEPATH += ../grid2d/

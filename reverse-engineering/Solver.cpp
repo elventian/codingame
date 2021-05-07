@@ -1,6 +1,8 @@
 #include "Solver.h"
+#include "Action.h"
 #include <chrono>
 #include <functional>
+#include <stack>
 
 double getTimePassed() {
 	static std::chrono::steady_clock::time_point t0;
@@ -64,12 +66,28 @@ void Solver::processNextState(const State &state)
 	if (!path.empty()) {
 		Coord2 nextCoord = path.front();
 		Direction dir(state.unit().pos(), nextCoord);
-		
-		char action = 'E'; //could be done with Direction::getChar, but I don't want to change chars in lib
-		if (dir == Direction(Direction::Up)) { action = 'C';}
-		else if (dir == Direction(Direction::Right)) { action = 'A';}
-		else if (dir == Direction(Direction::Down)) { action = 'D';}
-		std::cout << action << std::endl;
+		std::cout << Action(dir).toChar() << std::endl;
 	}
 	else { std::cout << "B" << std::endl; }
+}
+
+void Solver::minimax(const State &originState, int maxDepth) const
+{
+	MinimaxState::reset(originState.unitsNum());
+	MinimaxState::registerMaximizingAgent(originState.unit().id());
+	
+	MinimaxState *root = MinimaxState::create(originState);
+	std::stack<MinimaxState *> stack;
+	stack.push(root);
+	
+	while (!stack.empty()) {
+		MinimaxState *state = stack.top();
+		stack.pop();
+		if (state->depth() == maxDepth || state->isTerminal()) {
+			state->evaluate();
+		}
+		else {
+			//
+		}
+	}
 }

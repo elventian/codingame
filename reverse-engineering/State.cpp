@@ -5,6 +5,9 @@
 #include <vector>
 #include <algorithm>
 
+char *MinimaxState::pool = new char[MinimaxState::poolSize * sizeof(MinimaxState)];
+MinimaxState *MinimaxState::nextFree = reinterpret_cast<MinimaxState *>(MinimaxState::pool);
+std::vector<bool> MinimaxState::agentsRoles;
 
 bool State::read(std::istream &in)
 {
@@ -81,6 +84,14 @@ bool State::read(std::istream &in)
 	
 	return true;
 }
+
+bool State::lost() const
+{
+	for (const Unit &enemy: m_enemies) {
+		if (m_unit.pos().isAdjacent(enemy.pos())) { return true; }
+	}
+	return false;
+}
 	
 void State::clear()
 {
@@ -118,4 +129,43 @@ std::ostream &operator<<(std::ostream &out, const State &state)
 		out << std::endl;
 	}
 	return out;
+}
+
+void MinimaxState::evaluate()
+{
+	if (lost()) { m_value = std::numeric_limits<float>::min(); }
+	else { m_value = m_checked.size(); }
+	
+	propagateValue();
+}
+
+void MinimaxState::propagateValue()
+{
+	MinimaxState *state = this;
+	while (state) {
+		if (!state->m_parent) { return; }
+		
+		bool canPropagate;
+		if (isAgentMaximizing(state->m_agentId)) {
+			canPropagate = state->m_value > state->m_parent->m_value;
+		}
+		else {
+			canPropagate = state->m_value < state->m_parent->m_value;
+		}
+		if (canPropagate) {
+			state->m_parent->m_value = state->m_value;
+			state = state->m_parent;
+		}
+		else {
+			if (!state->m_children.empty() && 
+				isAgentMaximizing(state->m_agentId) != 
+					isAgentMaximizing(state->m_children.front()->m_agentId)) {
+				//pruning
+				for (MinimaxState *child: m_children) {
+					child->m_prune = true;
+				}
+			}
+			break;
+		}
+	}
 }
