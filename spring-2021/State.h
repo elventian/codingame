@@ -28,6 +28,8 @@ private:
 	TreeList m_oppTrees;
 	
 	const int daysNum = 24;
+	
+	Hex::Dir getSunDir() const { return Hex::nextDir(Hex::DirSE, m_day); }
 };
 
 #endif // STATE_H

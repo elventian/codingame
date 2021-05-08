@@ -75,5 +75,13 @@ void State::clear()
 
 void State::process()
 {
+	m_map.updateShadows(getSunDir());
+	for (Cell &c: m_map) {
+		if (c.shadowPower())
+		{
+			std::cerr << "Cell " << c.id() << ": shadow " << c.shadowPower() << std::endl;
+		}
+	}
+	
 	std::cout << "WAIT" << std::endl;
 }
