@@ -2,6 +2,7 @@
 #define CELL_H
 
 #include <vector>
+#include <cstring>
 #include "Hex.h"
 #include "Tree.h"
 
@@ -11,7 +12,7 @@ public:
 	Cell(int id = 0, int q = 0, int r = 0) : Hex(q, r), m_id(id), m_tree(nullptr) {}
 	void clear() { 
 		m_tree = nullptr; 
-		m_shadowPower = 0;
+		memset(m_shadowPower, 0, sizeof(m_shadowPower));
 	}
 	int id() const { return m_id; }
 	int richness() const { return m_richness; }
@@ -19,13 +20,13 @@ public:
 	Tree *tree() const { return m_tree; }
 	void addTree(Tree *tree) { m_tree = tree; }
 	
-	int shadowPower() const { return m_shadowPower;	}
-	void setShadowPower(int shadowPower) { m_shadowPower = shadowPower; }
+	int shadowPower(Dir dir) const { return m_shadowPower[dir];	}
+	void setShadowPower(Dir dir, int shadowPower) { m_shadowPower[dir] = shadowPower; }
 	
 private:
 	int m_id;
 	int m_richness;
-	int m_shadowPower;
+	int m_shadowPower[DirsNum];
 	Tree *m_tree;
 };
 

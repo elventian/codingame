@@ -8,7 +8,6 @@
 
 State::State(std::istream &in)
 {
-	clear();
 	int numberOfCells; // 37
 	in >> numberOfCells; in.ignore();
 	for (int i = 0; i < numberOfCells; i++) {
@@ -27,6 +26,7 @@ State::State(std::istream &in)
 
 bool State::read(std::istream &in)
 {
+	clear();
 	in >> m_day; in.ignore();	
 	
 	std::cerr << m_map.size() << std::endl;
@@ -48,7 +48,7 @@ bool State::read(std::istream &in)
 		bool isDormant; // 1 if this tree is dormant
 		in >> cellIndex >> size >> isMine >> isDormant; in.ignore();
 		std::cerr << cellIndex << " " << size << " " << isMine << " " <<  isDormant << std::endl;
-		Tree *t = new Tree(size, isMine, isDormant);
+		Tree *t = new Tree(cellIndex, size, isMine, isDormant);
 		if (isMine) { m_myTrees.push_back(t) ;}
 		else { m_oppTrees.push_back(t); }
 		m_map[cellIndex].addTree(t);
@@ -63,25 +63,104 @@ bool State::read(std::istream &in)
 	return true;
 }
 
+State::~State()
+{
+	for (const Tree *t: m_newTrees) { delete t; }
+}
+
 void State::clear()
 {
 	m_map.clear();
-	for (Tree *t: m_myTrees) { delete t; }
-	for (Tree *t: m_oppTrees) { delete t; }
+	for (const Tree *t: m_myTrees) { delete t; }
+	for (const Tree *t: m_oppTrees) { delete t; }
 	m_myTrees.clear();
 	m_oppTrees.clear();	
 }
 
+int State::growCost(int treeSize) const
+{
+	return (1 << treeSize) - 1 + treesNum(treeSize);
+}
+
+int State::growCost(const Tree *tree) const
+{
+	return growCost(tree->size() + 1);
+}
+
+int State::treesNum(int treeSize) const
+{
+	int res = 0;
+	for (const Tree *tree: m_myTrees)
+	{
+		if (tree->size() == treeSize) { res++; }
+	}
+	return res;
+}
+
+void State::grow(const Tree *tree)
+{
+	m_sun -= growCost(tree);
+	Tree *newTree = tree->grow();
+	m_newTrees.push_back(newTree);
+	m_myTrees.push_back(newTree);
+	m_myTrees.remove(tree);
+	m_map[newTree->cellIndex()].addTree(newTree);
+}
+
+void State::plant(Hex pos)
+{
+	m_sun -= growCost(0);
+	Tree *newTree = new Tree(m_map.indexByHex(pos), 1, true, true);
+	m_newTrees.push_back(newTree);
+	m_myTrees.push_back(newTree);
+	m_map[newTree->cellIndex()].addTree(newTree);
+}
 
 void State::process()
 {
-	m_map.updateShadows(getSunDir());
-	for (Cell &c: m_map) {
-		if (c.shadowPower())
-		{
-			std::cerr << "Cell " << c.id() << ": shadow " << c.shadowPower() << std::endl;
+	m_map.updateShadows();
+	evaluate();
+	std::cerr << "Base value = " << m_value << std::endl;
+	int bestValue = m_value;
+	std::string bestAction = "WAIT";
+	for (const Tree *tree: m_myTrees) {
+		if (tree->canGrow() && growCost(tree) <= m_sun)	{
+			State nextState(*this); //destructor will delete grown trees!
+			nextState.grow(tree);
+			nextState.evaluate();
+			std::cerr << "Grow " << tree->cellIndex() << " : " << nextState.m_value << " points" << std::endl;
+			if (bestValue <= nextState.m_value) {
+				bestValue = nextState.m_value;
+				bestAction = "GROW " +  std::to_string(tree->cellIndex());
+			}
+		}
+		if (tree->canPlant() && growCost(0) <= m_sun) {
+			HexList &&seedCells = m_map.seedCells(tree);
+			for (Hex h: seedCells) {
+				State nextState(*this); //destructor will delete planted seeds!
+				nextState.plant(h);
+				nextState.evaluate();
+				std::cerr << "Plant " << m_map.indexByHex(h) << " : " << nextState.m_value << " points" << std::endl;
+				if (bestValue <= nextState.m_value) {
+					bestValue = nextState.m_value;
+					bestAction = "SEED " +  std::to_string(tree->cellIndex()) + " " 
+						+ std::to_string(m_map.indexByHex(h));
+				}
+			}
 		}
 	}
-	
-	std::cout << "WAIT" << std::endl;
+
+	std::cout << bestAction << std::endl;	
+	//std::cout << "WAIT" << std::endl;	
+}
+
+void State::evaluate()
+{
+	int expectedSunPoints = 0;
+	for (const Tree *tree: m_myTrees) {
+		for (int curDay = 0; curDay < Hex::DirsNum && curDay + m_day < daysNum; curDay++) {
+			expectedSunPoints += m_map.sunPoints(tree, Hex::nextDir((Hex::Dir)curDay, m_day));
+		}
+	}
+	m_value = expectedSunPoints + m_sun;
 }

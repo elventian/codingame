@@ -22,6 +22,7 @@ int main(int argc, char **argv)
 	}
 	istream &in = (argc == 2)? infile : cin;
 	
+	Map::init();
 	State state(in);
 	while (state.read(in))
 	{

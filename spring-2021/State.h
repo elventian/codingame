@@ -12,6 +12,7 @@ class State
 	friend std::ostream &operator<<(std::ostream &out, const State &state);
 public:
 	State(std::istream &in);
+	~State();
 	bool read(std::istream &in);
 	void process();
 	void clear();
@@ -26,10 +27,18 @@ private:
 	int m_oppIsWaiting;  // whether your opponent is asleep until the next day
 	TreeList m_myTrees;
 	TreeList m_oppTrees;
-	
+	TreeList m_newTrees;
 	const int daysNum = 24;
+	int m_value;
 	
-	Hex::Dir getSunDir() const { return Hex::nextDir(Hex::DirSE, m_day); }
+	Hex::Dir getSunDir() const { return Hex::nextDir(Hex::DirS, m_day); }
+	int growCost(int treeSize) const;
+	int growCost(const Tree *tree) const;
+	int treesNum(int treeSize) const;
+	void evaluate();
+	void grow(const Tree *tree);
+	void plant(Hex pos);
+	
 };
 
 #endif // STATE_H
