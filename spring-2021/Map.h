@@ -16,6 +16,8 @@ public:
 	const Cell &operator[](Hex hexCoord) const { return m_cells[m_cellIdByCoord[hexCoord]]; }
 	int indexByHex(Hex hexCoord) const { return m_cellIdByCoord[hexCoord]; }
 	const Cell &getCellOf(const Tree *tree) const { return (*this)[tree->cellIndex()]; }
+	int mirrorCellIndex(int cellIndex) const;
+	bool contains(Hex hexCoord) const { return m_cellIdByCoord.count(hexCoord); }
 	
 	CellVector::iterator begin() { return m_cells.begin(); }
 	CellVector::iterator end() { return m_cells.end(); }
@@ -26,7 +28,6 @@ public:
 private:
 	CellVector m_cells;
 	static std::map<Hex, int> m_cellIdByCoord;
-	bool contains(Hex hexCoord) const { return m_cellIdByCoord.count(hexCoord); }
 };
 
 #endif // MAP_H

@@ -27,7 +27,8 @@ State::State(std::istream &in)
 
 bool State::read(std::istream &in)
 {
-	clear();
+	m_map.clear();
+	TreeList myTrees, oppTrees;
 	in >> m_day; in.ignore();	
 	
 	std::cerr << m_map.size() << std::endl;
@@ -49,9 +50,29 @@ bool State::read(std::istream &in)
 		bool isDormant; // 1 if this tree is dormant
 		in >> cellIndex >> size >> isMine >> isDormant; in.ignore();
 		std::cerr << cellIndex << " " << size << " " << isMine << " " <<  isDormant << std::endl;
+		if (!isMine) {
+			const Tree *prevTree = nullptr;
+			for (const Tree *t: m_oppTrees) {
+				if (t->cellIndex() == cellIndex) {
+					prevTree = t;
+					break;
+				}
+			}
+			if (!prevTree || prevTree->size() > size) {
+				if (m_day == 0 && m_oppTrees.size() == 0) { }
+				else {
+					std::cerr << "New tree detected at " << cellIndex << std::endl;
+					actions.push_back(Action(Action::Seed, m_map.mirrorCellIndex(cellIndex)));
+				}
+			}
+			else if (prevTree->size() < size) {
+				std::cerr << "Grow detected at " << cellIndex << std::endl;
+				actions.push_back(Action(Action::Grow, m_map.mirrorCellIndex(cellIndex)));
+			}
+		}
 		Tree *t = new Tree(cellIndex, size, isMine, isDormant);
-		if (isMine) { m_myTrees.push_back(t) ;}
-		else { m_oppTrees.push_back(t); }
+		if (isMine) { myTrees.push_back(t); }
+		else { oppTrees.push_back(t); }
 		m_map[cellIndex].addTree(t);
 	}
 	int numberOfPossibleMoves;
@@ -60,6 +81,24 @@ bool State::read(std::istream &in)
 		std::string possibleMove;
 		std::getline(in, possibleMove);
 	}
+	
+	for (const Tree *oldTree: m_oppTrees) {
+		bool completed = true;
+		for (const Tree *newTree: oppTrees) {
+			if (oldTree->cellIndex() == newTree->cellIndex() && oldTree->size() <= newTree->size()) {
+				completed = false;
+				break;
+			}
+		}
+		if (completed) {
+			std::cerr << "Complete detected at " << oldTree->cellIndex() << std::endl;
+			actions.push_front(Action(Action::Complete, m_map.mirrorCellIndex(oldTree->cellIndex())));
+		}
+	}
+	
+	clear();
+	m_oppTrees.splice(m_oppTrees.begin(), oppTrees);
+	m_myTrees.splice(m_myTrees.begin(), myTrees);
 	
 	return true;
 }
@@ -71,7 +110,6 @@ State::~State()
 
 void State::clear()
 {
-	m_map.clear();
 	for (const Tree *t: m_myTrees) { delete t; }
 	for (const Tree *t: m_oppTrees) { delete t; }
 	m_myTrees.clear();
@@ -126,54 +164,6 @@ void State::plant(Hex pos)
 	m_map[newTree->cellIndex()].addTree(newTree);
 }
 
-void State::process()
-{
-	m_map.updateShadows();
-	evaluate();
-	std::cerr << "Base value = " << m_value << std::endl;
-	int bestValue = m_value;
-	std::string bestAction = "WAIT";
-	int bestCost = 0;
-	for (const Tree *tree: m_myTrees) {
-		const Cell &treeCell = m_map.getCellOf(tree);
-		if (tree->canGrow())	{
-			State nextState(*this); //destructor will delete grown trees!
-			nextState.grow(tree);
-			nextState.evaluate();
-			std::cerr << "Grow " << tree->cellIndex() << " : " << nextState.m_value << " points" << std::endl;
-			if (bestValue <= nextState.m_value) {
-				bestValue = nextState.m_value;
-				bestAction = "GROW " +  std::to_string(tree->cellIndex());
-				bestCost = growCost(tree);
-			}
-		}
-		HexList &&seedCells = m_map.seedCells(treeCell);
-		for (Hex h: seedCells) {
-			State nextState(*this); //destructor will delete planted seeds!
-			nextState.plant(h);
-			nextState.evaluate();
-			std::cerr << "Plant " << m_map.indexByHex(h) << " : " << nextState.m_value << " points" << std::endl;
-			if (bestValue <= nextState.m_value) {
-				bestValue = nextState.m_value;
-				HexList &&neighCells = treeCell.neighbours(tree->size());
-				if (std::find(neighCells.begin(), neighCells.end(), h) != neighCells.end())	{
-					bestCost = growCost(0);
-					bestAction = "SEED " +  std::to_string(tree->cellIndex()) + " " 
-						+ std::to_string(m_map.indexByHex(h));
-				}
-				else {
-					bestAction = "GROW " +  std::to_string(tree->cellIndex());
-					bestCost = growCost(tree);
-				}
-			}
-		}
-	}
-
-	if (bestCost > m_sun) { bestAction = "WAIT"; }
-	std::cout << bestAction << std::endl;	
-	//std::cout << "WAIT" << std::endl;	
-}
-
 void State::evaluate()
 {
 	int treesPotential = 0;
@@ -195,4 +185,57 @@ void State::evaluate()
 		treesPotential += expectedVictoryPoints - cost;
 	}
 	m_value = treesPotential + m_sun;
+}
+
+void State::process()
+{
+	m_map.updateShadows();
+	
+	if (m_day == daysNum - 1) {
+		for (const Tree *tree: m_myTrees) {
+			actions.push_front(Action(Action::Complete, tree->cellIndex()));
+		}
+	}
+	
+	for (auto it = actions.begin(); it != actions.end(); it++) {
+		Action &action = *it;
+		if (action.type() == Action::Complete) {
+			const Tree *tree = m_map[action.cellId()].tree();
+			if (tree && tree->isMine() && tree->canComplete() && m_sun >= completeCost(tree)) {
+				std::cout << "COMPLETE " << action.cellId() << std::endl;
+				actions.erase(it);
+				return;
+			}
+		}
+		else if (action.type() == Action::Grow) {
+			const Tree *tree = m_map[action.cellId()].tree();
+			if (tree && tree->isMine() && tree->canGrow() && m_sun >= growCost(tree)) {
+				std::cout << "GROW " << action.cellId() << std::endl;
+				actions.erase(it);
+				return;
+			}
+		}
+		else if (action.type() == Action::Seed) {
+			if (m_sun >= growCost(0))
+			{
+				for (int i = 1; i < Tree::maxSize; i++) {
+					HexList neighbours = m_map[action.cellId()].neighbours(i);
+					for (Hex h: neighbours) {
+						if (m_map.contains(h) && m_map[h].tree()) {
+							const Tree *tree = m_map[h].tree();
+							if (tree->isMine() && tree->size() >= i && tree->canPlant()) {
+								std::cout << "SEED " << m_map[h].tree()->cellIndex()
+									<< " " << action.cellId() << std::endl;
+								actions.erase(it);
+								return;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	std::cout << "WAIT" << std::endl;
+	
 }

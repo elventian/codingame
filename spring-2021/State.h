@@ -6,6 +6,7 @@
 #include <vector>
 #include <limits>
 #include "Map.h"
+#include "Action.h"
 
 class State
 {
@@ -31,6 +32,7 @@ private:
 	const int daysNum = 24;
 	const int vpCoeff = 3;
 	int m_value;
+	ActionsList actions;
 	
 	Hex::Dir getSunDir() const { return Hex::nextDir(Hex::DirS, m_day); }
 	int growCost(int treeSize) const;

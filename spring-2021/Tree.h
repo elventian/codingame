@@ -16,6 +16,7 @@ public:
 	bool isDormant() const { return m_isDormant; }
 	int cellIndex() const {	return m_cellIndex;	}
 	bool canGrow() const { return !isDormant() && size() < maxSize; }
+	bool canComplete() const { return !isDormant() && size() == maxSize; }
 	bool canPlant() const { return !isDormant() && size() > 0; }
 	int turnsToComplete() const { return maxSize - size() + 1; }
 	Tree *grow() const {

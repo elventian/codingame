@@ -60,6 +60,11 @@ void Map::clear()
 	}
 }
 
+int Map::mirrorCellIndex(int cellIndex) const
+{
+	return indexByHex((*this)[cellIndex].mirror());
+}
+
 void Map::updateShadows()
 {
 	for (Cell &c: m_cells) {

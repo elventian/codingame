@@ -17,6 +17,7 @@ HEADERS += \
     ../grid2d/Hex.h \
     Map.h \
     Cell.h \
-    Tree.h
+    Tree.h \
+    Action.h
 
 INCLUDEPATH += ../grid2d/
