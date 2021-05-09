@@ -29,11 +29,13 @@ private:
 	TreeList m_oppTrees;
 	TreeList m_newTrees;
 	const int daysNum = 24;
+	const int vpCoeff = 3;
 	int m_value;
 	
 	Hex::Dir getSunDir() const { return Hex::nextDir(Hex::DirS, m_day); }
 	int growCost(int treeSize) const;
 	int growCost(const Tree *tree) const;
+	int completeCost(const Tree *tree) const;
 	int treesNum(int treeSize) const;
 	void evaluate();
 	void grow(const Tree *tree);

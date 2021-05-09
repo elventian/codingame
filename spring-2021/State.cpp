@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <math.h>
 
 
 State::State(std::istream &in)
@@ -87,6 +88,15 @@ int State::growCost(const Tree *tree) const
 	return growCost(tree->size() + 1);
 }
 
+int State::completeCost(const Tree *tree) const
+{
+	int res = 4;
+	for (int i = tree->size(); i < Tree::maxSize; i++) {
+		res += (1 << i) - 1;
+	}
+	return res;
+}
+
 int State::treesNum(int treeSize) const
 {
 	int res = 0;
@@ -110,7 +120,7 @@ void State::grow(const Tree *tree)
 void State::plant(Hex pos)
 {
 	m_sun -= growCost(0);
-	Tree *newTree = new Tree(m_map.indexByHex(pos), 1, true, true);
+	Tree *newTree = new Tree(m_map.indexByHex(pos), 0, true, true);
 	m_newTrees.push_back(newTree);
 	m_myTrees.push_back(newTree);
 	m_map[newTree->cellIndex()].addTree(newTree);
@@ -123,8 +133,10 @@ void State::process()
 	std::cerr << "Base value = " << m_value << std::endl;
 	int bestValue = m_value;
 	std::string bestAction = "WAIT";
+	int bestCost = 0;
 	for (const Tree *tree: m_myTrees) {
-		if (tree->canGrow() && growCost(tree) <= m_sun)	{
+		const Cell &treeCell = m_map.getCellOf(tree);
+		if (tree->canGrow())	{
 			State nextState(*this); //destructor will delete grown trees!
 			nextState.grow(tree);
 			nextState.evaluate();
@@ -132,35 +144,55 @@ void State::process()
 			if (bestValue <= nextState.m_value) {
 				bestValue = nextState.m_value;
 				bestAction = "GROW " +  std::to_string(tree->cellIndex());
+				bestCost = growCost(tree);
 			}
 		}
-		if (tree->canPlant() && growCost(0) <= m_sun) {
-			HexList &&seedCells = m_map.seedCells(tree);
-			for (Hex h: seedCells) {
-				State nextState(*this); //destructor will delete planted seeds!
-				nextState.plant(h);
-				nextState.evaluate();
-				std::cerr << "Plant " << m_map.indexByHex(h) << " : " << nextState.m_value << " points" << std::endl;
-				if (bestValue <= nextState.m_value) {
-					bestValue = nextState.m_value;
+		HexList &&seedCells = m_map.seedCells(treeCell);
+		for (Hex h: seedCells) {
+			State nextState(*this); //destructor will delete planted seeds!
+			nextState.plant(h);
+			nextState.evaluate();
+			std::cerr << "Plant " << m_map.indexByHex(h) << " : " << nextState.m_value << " points" << std::endl;
+			if (bestValue <= nextState.m_value) {
+				bestValue = nextState.m_value;
+				HexList &&neighCells = treeCell.neighbours(tree->size());
+				if (std::find(neighCells.begin(), neighCells.end(), h) != neighCells.end())	{
+					bestCost = growCost(0);
 					bestAction = "SEED " +  std::to_string(tree->cellIndex()) + " " 
 						+ std::to_string(m_map.indexByHex(h));
+				}
+				else {
+					bestAction = "GROW " +  std::to_string(tree->cellIndex());
+					bestCost = growCost(tree);
 				}
 			}
 		}
 	}
 
+	if (bestCost > m_sun) { bestAction = "WAIT"; }
 	std::cout << bestAction << std::endl;	
 	//std::cout << "WAIT" << std::endl;	
 }
 
 void State::evaluate()
 {
+	int treesPotential = 0;
 	int expectedSunPoints = 0;
+	
 	for (const Tree *tree: m_myTrees) {
-		for (int curDay = 0; curDay < Hex::DirsNum && curDay + m_day < daysNum; curDay++) {
-			expectedSunPoints += m_map.sunPoints(tree, Hex::nextDir((Hex::Dir)curDay, m_day));
+		for (int dayOffset = 1; dayOffset + m_day < daysNum; dayOffset++) {
+			expectedSunPoints += m_map.sunPoints(tree, Hex::nextDir(getSunDir(), dayOffset));
 		}
 	}
-	m_value = expectedSunPoints + m_sun;
+	
+	float sunPerTurn = expectedSunPoints / float(daysNum - m_day - 1);
+	
+	for (const Tree *tree: m_myTrees) {
+		int cost = completeCost(tree);
+		int turnsToComplete = std::max(int(ceil(cost / sunPerTurn)), tree->turnsToComplete());
+		int expectedNutrition = m_nutrients - turnsToComplete;
+		int expectedVictoryPoints = (m_map.getCellOf(tree).richnessPoints() + expectedNutrition) * vpCoeff;
+		treesPotential += expectedVictoryPoints - cost;
+	}
+	m_value = treesPotential + m_sun;
 }

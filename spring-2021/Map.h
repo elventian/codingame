@@ -15,12 +15,14 @@ public:
 	Cell &operator[](Hex hexCoord) { return m_cells[m_cellIdByCoord[hexCoord]]; }
 	const Cell &operator[](Hex hexCoord) const { return m_cells[m_cellIdByCoord[hexCoord]]; }
 	int indexByHex(Hex hexCoord) const { return m_cellIdByCoord[hexCoord]; }
+	const Cell &getCellOf(const Tree *tree) const { return (*this)[tree->cellIndex()]; }
+	
 	CellVector::iterator begin() { return m_cells.begin(); }
 	CellVector::iterator end() { return m_cells.end(); }
 	int size() const { return m_cells.size(); }
 	void updateShadows();
 	int sunPoints(const Tree *tree, Hex::Dir dir) const;
-	HexList seedCells(const Tree *tree) const;
+	HexList seedCells(const Cell &center) const;
 private:
 	CellVector m_cells;
 	static std::map<Hex, int> m_cellIdByCoord;

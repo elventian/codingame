@@ -16,6 +16,7 @@ public:
 	}
 	int id() const { return m_id; }
 	int richness() const { return m_richness; }
+	int richnessPoints() const { return 2 * (m_richness - 1); }
 	void setRichness(int richness) { m_richness = richness;	}
 	Tree *tree() const { return m_tree; }
 	void addTree(Tree *tree) { m_tree = tree; }

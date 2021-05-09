@@ -85,10 +85,10 @@ int Map::sunPoints(const Tree *tree, Hex::Dir dir) const
 	return (treeSize > m_cells[tree->cellIndex()].shadowPower(dir)) ? treeSize : 0;
 }
 
-HexList Map::seedCells(const Tree *tree) const
+HexList Map::seedCells(const Cell &center) const
 {
 	HexList res;
-	for (Hex h: (*this)[tree->cellIndex()].neighbours(tree->size())) {
+	for (Hex h: center.neighbours(Tree::maxSize)) {
 		if (contains(h) && (*this)[h].richness() > 0 && !(*this)[h].tree()) {
 			res.push_back(h);
 		}
