@@ -13,10 +13,9 @@ class State
 	friend std::ostream &operator<<(std::ostream &out, const State &state);
 public:
 	State(std::istream &in);
-	~State();
 	bool read(std::istream &in);
 	void process();
-	void clear();
+	int value() const { return m_value; }
 private:
 	Map m_map;
 	int m_day;
@@ -26,22 +25,30 @@ private:
 	int m_oppSun;
 	int m_oppScore;
 	int m_oppIsWaiting;  // whether your opponent is asleep until the next day
-	TreeList m_myTrees;
-	TreeList m_oppTrees;
-	TreeList m_newTrees;
 	const int daysNum = 24;
 	const int vpCoeff = 3;
+	const int m_completeCost = 4;
 	int m_value;
 	ActionsList actions;
+	//Pool
+	static const int poolSize = 10000;
+	static char *pool;
+	static State *nextFree;
+	static State *create(const State &other) {
+		return new(nextFree++) State(other);
+	}
+	static void resetMemoryPool() {
+		nextFree = reinterpret_cast<State *>(State::pool);
+	}
 	
 	Hex::Dir getSunDir() const { return Hex::nextDir(Hex::DirS, m_day); }
 	int growCost(int treeSize) const;
-	int growCost(const Tree *tree) const;
+	int growCost(const Tree &tree) const;
 	int completeCost(const Tree *tree) const;
 	int treesNum(int treeSize) const;
 	void evaluate();
-	void grow(const Tree *tree);
-	void plant(Hex pos);
+	void apply(Action action);
+	void addAction(Action action) { actions.push_back(action); }
 	
 };
 

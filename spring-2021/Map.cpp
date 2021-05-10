@@ -58,6 +58,8 @@ void Map::clear()
 	for (Cell &c: m_cells) {
 		c.clear();
 	}
+	m_myTrees.clear();
+	m_oppTrees.clear();
 }
 
 int Map::mirrorCellIndex(int cellIndex) const
@@ -67,36 +69,103 @@ int Map::mirrorCellIndex(int cellIndex) const
 
 void Map::updateShadows()
 {
-	for (Cell &c: m_cells) {
-		Tree *tree = c.tree();
-		if (tree) {
-			int shadowPower = tree->size();
-			for (int dir = 0; dir < Hex::DirsNum; dir++)
+	updateShadows(m_myTrees);
+	updateShadows(m_oppTrees);
+}
+
+void Map::updateShadows(const Tree &tree)
+{
+	int shadowPower = tree.size();
+	for (int i = 0; i < Hex::DirsNum; i++)
+	{
+		Hex::Dir dir = (Hex::Dir) i;
+		Cell &treeCell = (*this)[tree.cellIndex()];
+		for (Hex h: treeCell.neighbours(dir, shadowPower)) {
+			if (contains(h) && (*this)[h].shadowPower(dir) < shadowPower)
 			{
-				for (Hex h: c.neighbours((Hex::Dir)dir, shadowPower)) {
-					if (contains(h))
-					{
-						(*this)[h].setShadowPower((Hex::Dir)dir, shadowPower);
-					}
-				}
+				(*this)[h].setShadowPower(dir, shadowPower);
 			}
 		}
 	}
 }
 
-int Map::sunPoints(const Tree *tree, Hex::Dir dir) const
+void Map::updateShadows(const TreeList &trees)
 {
-	int treeSize = tree->size();
-	return (treeSize > m_cells[tree->cellIndex()].shadowPower(dir)) ? treeSize : 0;
+	for (const Tree &tree: trees) {
+		updateShadows(tree);
+	}
 }
 
-HexList Map::seedCells(const Cell &center) const
+int Map::sunPoints(const Tree &tree, Hex::Dir dir) const
 {
-	HexList res;
-	for (Hex h: center.neighbours(Tree::maxSize)) {
-		if (contains(h) && (*this)[h].richness() > 0 && !(*this)[h].tree()) {
-			res.push_back(h);
+	int treeSize = tree.size();
+	return (treeSize > m_cells[tree.cellIndex()].shadowPower(dir)) ? treeSize : 0;
+}
+
+int Map::sunPoints(Hex::Dir dir) const
+{
+	int res = 0;
+	for (const Tree &tree: m_myTrees) {
+		res += sunPoints(tree, dir);
+	}
+	return res;
+}
+
+std::list<int> Map::seedCells(const Tree &tree) const
+{
+	std::list<int> res;
+	
+	for (Hex h: m_cells[tree.cellIndex()].neighbours(tree.size())) {
+		if (contains(h) && (*this)[h].richness() > 0 && !hasTree(h)) {
+			res.push_back(indexByHex(h));
 		}
 	}
 	return res;
+}
+
+void Map::completeTreeAt(int cellIndex)
+{
+	for (auto it = m_myTrees.begin(); it != m_myTrees.end(); it++)
+	{
+		if (it->cellIndex() == cellIndex) {
+			m_myTrees.erase(it);
+			return;
+		}
+	}
+}
+
+bool Map::hasTree(Hex coord) const
+{
+	for (const Tree &tree: m_myTrees) {
+		if (tree.cellIndex() == indexByHex(coord)) { return true; }
+	}
+	for (const Tree &tree: m_oppTrees) {
+		if (tree.cellIndex() == indexByHex(coord)) { return true; }
+	}
+	return false;
+}
+
+int Map::treesNum(int treeSize) const
+{
+	int res = 0;
+	for (const Tree &tree: m_myTrees)
+	{
+		if (tree.size() == treeSize) { res++; }
+	}
+	return res;
+}
+
+Tree *Map::myTree(int cellIndex)
+{
+	for (Tree &tree: m_myTrees) {
+		if (tree.cellIndex() == cellIndex) { return &tree;}
+	}
+	return nullptr;
+}
+
+void Map::nextTurn()
+{
+	for (Tree &tree: m_myTrees) {
+		tree.wake();
+	}
 }

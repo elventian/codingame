@@ -11,7 +11,6 @@ public:
 	static void init();
 	void clear();
 	Cell &operator[](int index) { return m_cells[index]; }
-	const Cell &operator[](int index) const { return m_cells[index]; }
 	Cell &operator[](Hex hexCoord) { return m_cells[m_cellIdByCoord[hexCoord]]; }
 	const Cell &operator[](Hex hexCoord) const { return m_cells[m_cellIdByCoord[hexCoord]]; }
 	int indexByHex(Hex hexCoord) const { return m_cellIdByCoord[hexCoord]; }
@@ -23,11 +22,30 @@ public:
 	CellVector::iterator end() { return m_cells.end(); }
 	int size() const { return m_cells.size(); }
 	void updateShadows();
-	int sunPoints(const Tree *tree, Hex::Dir dir) const;
-	HexList seedCells(const Cell &center) const;
+	void updateShadows(const Tree &tree);
+	int sunPoints(const Tree &tree, Hex::Dir dir) const;
+	int sunPoints(Hex::Dir dir) const;
+	std::list<int> seedCells(const Tree &tree) const;
+	void addTree(const Tree &tree) { 
+		if (tree.isMine()) { m_myTrees.push_back(tree); }
+		else { m_oppTrees.push_back(tree); }
+	}
+	void completeTreeAt(int cellIndex);
+	bool hasTree(Hex coord) const;
+	int treesNum(int treeSize) const;
+	Tree *myTree(int cellIndex);
+	TreeList &myTrees() { return m_myTrees; }
+	TreeList &opponentTrees() { return m_oppTrees; }
+	int richnessPoints(int cellIndex) const { return m_cells[cellIndex].richnessPoints(); }
+	void nextTurn();
 private:
 	CellVector m_cells;
+	TreeList m_myTrees;
+	TreeList m_oppTrees;
 	static std::map<Hex, int> m_cellIdByCoord;
+	
+	const Cell &operator[](int index) const { return m_cells[index]; }
+	void updateShadows(const TreeList &trees);
 };
 
 #endif // MAP_H

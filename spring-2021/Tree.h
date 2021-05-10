@@ -6,7 +6,7 @@
 class Tree
 {
 public:
-	Tree(int cellIndex, int size, int isMine, int isDormant): 
+	Tree(int cellIndex, int size, int isMine = true, int isDormant = true): 
 		m_cellIndex(cellIndex), m_size(size), m_isMine(isMine), m_isDormant(isDormant) {}
 	
 	static const int maxSize = 3;
@@ -19,11 +19,9 @@ public:
 	bool canComplete() const { return !isDormant() && size() == maxSize; }
 	bool canPlant() const { return !isDormant() && size() > 0; }
 	int turnsToComplete() const { return maxSize - size() + 1; }
-	Tree *grow() const {
-		Tree *res = new Tree(*this);
-		res->m_size++;
-		return res;
-	}
+	void grow() { m_size++; m_isDormant = true; }
+	void seed() { m_isDormant = true; }
+	void wake() { m_isDormant = false; }
 	
 private:
 	int m_cellIndex;
@@ -32,7 +30,7 @@ private:
 	bool m_isDormant;
 };
 
-typedef std::list<const Tree *> TreeList;
+typedef std::list<Tree> TreeList;
 
 #endif // TREE_H
 
