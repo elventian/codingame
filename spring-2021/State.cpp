@@ -94,6 +94,9 @@ void State::evaluate()
 			expectedSunPoints += m_map.sunPoints(tree, Hex::nextDir(getSunDir(), dayOffset));
 		}
 		treesPotential += m_map.richnessPoints(tree.cellIndex()) * vpCoeff;
+		for (int i = m_map.valueOfCell(tree.cellIndex()) + 1; i <= Hex::DirsNum; i++) {
+			treesPotential -= m_map.cellsOfValue(i);	
+		}
 	}
 	
 	for (const Tree &tree: m_map.opponentTrees()) {
@@ -127,6 +130,7 @@ void State::process()
 {
 	State::resetMemoryPool();
 	m_map.updateShadows();
+	m_map.recalcCellValues();
 	evaluate();
 	std::cerr << "Base value = " << m_value << std::endl;
 	
@@ -199,7 +203,6 @@ void State::process()
 			node->m_day++;
 			node->m_sun += node->m_map.sunPoints(node->getSunDir());
 			node->m_map.nextTurn();
-			node->evaluate();
 			searchQueue.push(node);
 		}
 	}

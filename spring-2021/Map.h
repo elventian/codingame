@@ -9,6 +9,8 @@ class Map
 public:
 	Map();
 	static void init();
+	static int cellsOfValue(int value) { return m_cellsOfValue[value]; }
+	static int valueOfCell(int cellIndex) { return m_cellValue[cellIndex]; }
 	void clear();
 	Cell &operator[](int index) { return m_cells[index]; }
 	Cell &operator[](Hex hexCoord) { return m_cells[m_cellIdByCoord[hexCoord]]; }
@@ -38,11 +40,15 @@ public:
 	TreeList &opponentTrees() { return m_oppTrees; }
 	int richnessPoints(int cellIndex) const { return m_cells[cellIndex].richnessPoints(); }
 	void nextTurn();
+	
+	void recalcCellValues();
 private:
 	CellVector m_cells;
 	TreeList m_myTrees;
 	TreeList m_oppTrees;
 	static std::map<Hex, int> m_cellIdByCoord;
+	static std::vector<int> m_cellValue;
+	static std::vector<int> m_cellsOfValue;
 	
 	const Cell &operator[](int index) const { return m_cells[index]; }
 	void updateShadows(const TreeList &trees);

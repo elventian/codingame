@@ -1,6 +1,8 @@
 #include "Map.h"
 
 std::map<Hex, int> Map::m_cellIdByCoord;
+std::vector<int> Map::m_cellValue;
+std::vector<int> Map::m_cellsOfValue;
 
 void Map::init()
 {
@@ -41,11 +43,14 @@ void Map::init()
 	m_cellIdByCoord[Hex(3, 0)] = 34;
 	m_cellIdByCoord[Hex(2, 1)] = 35;
 	m_cellIdByCoord[Hex(1, 2)] = 36;
+	
+	m_cellValue.resize(m_cellIdByCoord.size());
 }
 
 Map::Map()
 {
 	m_cells.resize(m_cellIdByCoord.size());
+	m_cellsOfValue.resize(Hex::DirsNum + 1);
 	
 	for (auto p: m_cellIdByCoord)
 	{
@@ -167,5 +172,20 @@ void Map::nextTurn()
 {
 	for (Tree &tree: m_myTrees) {
 		tree.wake();
+	}
+}
+
+#include <iostream>
+void Map::recalcCellValues()
+{
+	std::fill(m_cellsOfValue.begin(), m_cellsOfValue.end(), 0);
+	for (Cell &c: m_cells) {
+		Tree tree(c.id(), 1);
+		m_cellValue[c.id()] = 0;
+		if (hasTree(c)) continue;
+		for (int i = 0; i < Hex::DirsNum; i++) {
+			m_cellValue[c.id()] += sunPoints(tree, (Hex::Dir)i);
+		}
+		m_cellsOfValue[m_cellValue[c.id()]]++;
 	}
 }

@@ -19,6 +19,7 @@ public:
 	bool canComplete() const { return !isDormant() && size() == maxSize; }
 	bool canPlant() const { return !isDormant() && size() > 0; }
 	int turnsToComplete() const { return maxSize - size() + 1; }
+	bool isSeed() const { return m_size == 0; }
 	void grow() { m_size++; m_isDormant = true; }
 	void seed() { m_isDormant = true; }
 	void wake() { m_isDormant = false; }
