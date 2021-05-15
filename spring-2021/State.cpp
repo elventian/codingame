@@ -1,4 +1,5 @@
 #include "State.h"
+#include "Configuration.h"
 
 #include <iostream>
 #include <string>
@@ -74,6 +75,20 @@ int State::growCost(const Tree &tree) const
 	return growCost(tree.size() + 1);
 }
 
+int State::growCost(const Configuration &conf) const
+{
+	int res = 0;
+	for (int reqSize = 0; reqSize <= Tree::maxSize; reqSize++) {
+		int reqTreesNum = conf.treesOfSize(reqSize);
+		if (reqTreesNum > 0) {
+			for (int curSize = 0; curSize <= reqSize; curSize++) {
+				res += ((1 << curSize) - 1) * reqTreesNum;
+			}
+		}
+	}
+	return res;
+}
+
 int State::completeCost(const Tree *tree) const
 {
 	int res = m_completeCost;
@@ -88,6 +103,7 @@ void State::evaluate()
 	int treesPotential = 0;
 	int expectedSunPoints = 0;
 	int expectedOppSunPoints = 0;
+	//int predictedNutrition = std::max(m_nutrients - m_day, 0);
 	
 	for (const Tree &tree: m_map.myTrees()) {
 		for (int dayOffset = 1; dayOffset + m_day < daysNum; dayOffset++) {
@@ -104,18 +120,13 @@ void State::evaluate()
 			expectedOppSunPoints += m_map.sunPoints(tree, Hex::nextDir(getSunDir(), dayOffset));
 		}
 	}
+	Configuration bestConf(m_day);
+	Configuration curConf(m_map.myTrees());
+	Configuration confDiff = bestConf - curConf;
+	int distToBestConf = growCost(confDiff);
 	
-	/*float sunPerTurn = expectedSunPoints / float(daysNum - m_day - 1);
-	
-	int turnsToComplete = 0;
-	for (const Tree *tree: m_myTrees) {
-		int cost = completeCost(tree);
-		turnsToComplete += std::max(int(ceil(cost / sunPerTurn)), tree->turnsToComplete());
-		int expectedNutrition = m_nutrients - turnsToComplete;
-		int expectedVictoryPoints = (m_map.getCellOf(tree).richnessPoints() + expectedNutrition) * vpCoeff;
-		treesPotential += expectedVictoryPoints - cost;
-	}*/
-	m_value = m_sun + expectedSunPoints + treesPotential + m_score * vpCoeff - expectedOppSunPoints;
+	m_value = m_sun + expectedSunPoints + treesPotential + m_score
+		- expectedOppSunPoints - distToBestConf;
 }
 
 class StateCmp 
@@ -214,38 +225,5 @@ void State::process()
 
 void State::apply(Action action)
 {
-	/*if (action.type() == Action::Complete) {
-		const Tree *tree = m_map[action.cellId()].tree();
-		if (tree && tree->isMine() && tree->canComplete() && m_sun >= completeCost(tree)) {
-			std::cout << "COMPLETE " << action.cellId() << std::endl;
-			return;
-		}
-	}
-	else if (action.type() == Action::Grow) {
-		const Tree *tree = m_map[action.cellId()].tree();
-		if (tree && tree->isMine() && tree->canGrow() && m_sun >= growCost(tree)) {
-			std::cout << "GROW " << action.cellId() << std::endl;
-			return;
-		}
-	}
-	else if (action.type() == Action::Seed) {
-		if (m_sun >= growCost(0))
-		{
-			for (int i = 1; i < Tree::maxSize; i++) {
-				HexList neighbours = m_map[action.cellId()].neighbours(i);
-				for (Hex h: neighbours) {
-					if (m_map.contains(h) && m_map[h].tree()) {
-						const Tree *tree = m_map[h].tree();
-						if (tree->isMine() && tree->size() >= i && tree->canPlant()) {
-							std::cout << "SEED " << m_map[h].tree()->cellIndex()
-								<< " " << action.cellId() << std::endl;
-							return;
-						}
-					}
-				}
-			}
-		}
-	}*/
-	
 	std::cout << action.toStr() << std::endl;
 }

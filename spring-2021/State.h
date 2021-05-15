@@ -7,6 +7,7 @@
 #include <limits>
 #include "Map.h"
 #include "Action.h"
+#include "Configuration.h"
 
 class State
 {
@@ -44,6 +45,7 @@ private:
 	Hex::Dir getSunDir() const { return Hex::nextDir(Hex::DirS, m_day); }
 	int growCost(int treeSize) const;
 	int growCost(const Tree &tree) const;
+	int growCost(const Configuration &conf) const;
 	int completeCost(const Tree *tree) const;
 	int treesNum(int treeSize) const;
 	void evaluate();
