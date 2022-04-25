@@ -4,4 +4,16 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += \
-        main.cpp
+        main.cpp \
+    State.cpp \
+	../grid2d/Coord2.cpp \
+    Unit.cpp \
+    Monster.cpp
+
+HEADERS += \
+    State.h \
+	../grid2d/Coord2.h \
+    Unit.h \
+    Monster.h
+
+INCLUDEPATH += ../grid2d/
