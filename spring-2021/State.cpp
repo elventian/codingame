@@ -11,6 +11,16 @@
 char *State::pool = new char[State::poolSize * sizeof(State)];
 State *State::nextFree = reinterpret_cast<State *>(State::pool);
 
+struct Statistics {
+	Statistics(): completedTrees(0), firstCompleteTurn(0), soilPoints(0) {}
+	int completedTrees;
+	int firstCompleteTurn;
+	int soilPoints;
+	int treesOfSize[Tree::maxSize];
+	int sunTreesBySize[Tree::maxSize];
+};
+Statistics statictics;
+
 State::State(std::istream &in)
 {
 	int numberOfCells; // 37
@@ -31,6 +41,8 @@ State::State(std::istream &in)
 
 bool State::read(std::istream &in)
 {
+	std::cerr << "soilPoints = " << statictics.soilPoints << std::endl;
+	TreeList oppTrees = m_map.opponentTrees();
 	m_map.clear();
 	in >> m_day; in.ignore();
 	
@@ -60,6 +72,33 @@ bool State::read(std::istream &in)
 	for (int i = 0; i < numberOfPossibleMoves; i++) {
 		std::string possibleMove;
 		std::getline(in, possibleMove);
+	}
+	
+	m_map.updateShadows();
+	for (const Tree &oldTree: oppTrees) {
+		bool completed = true;
+		for (const Tree &newTree: m_map.opponentTrees()) {
+			if (oldTree.cellIndex() == newTree.cellIndex() && oldTree.size() <= newTree.size()) {
+				completed = false;
+				break;
+			}
+		}
+		if (completed) {
+			//std::cerr << "Complete detected at " << oldTree.cellIndex() << std::endl;
+			statictics.completedTrees++;
+			statictics.soilPoints += m_map[oldTree.cellIndex()].richnessPoints();
+			if (statictics.completedTrees == 1) {
+				statictics.firstCompleteTurn = m_day;
+			}
+		}
+	}
+	for (const Tree &newTree: m_map.opponentTrees()) {
+		if (newTree.size() > 0) {
+			statictics.treesOfSize[newTree.size() - 1] += 1;
+			if (m_map[newTree.cellIndex()].shadowPower(getSunDir()) < newTree.size()) {
+				statictics.sunTreesBySize[newTree.size() - 1] += 1;
+			}
+		}
 	}
 		
 	return true;
@@ -122,11 +161,12 @@ void State::evaluate()
 	}
 	Configuration bestConf(m_day);
 	Configuration curConf(m_map.myTrees());
-	Configuration confDiff = bestConf - curConf;
-	int distToBestConf = growCost(confDiff);
+	//Configuration confDiff = bestConf - curConf;
+	int distToBestConf = curConf.actionsToAchieve(bestConf);
+	int extraTrees = curConf.extraTrees(bestConf);
 	
-	m_value = m_sun + expectedSunPoints + treesPotential + m_score
-		- expectedOppSunPoints - distToBestConf;
+	m_value = /*m_sun +*/ expectedSunPoints + treesPotential + m_score * vpCoeff
+		- expectedOppSunPoints - distToBestConf - extraTrees * 13;
 }
 
 class StateCmp 
@@ -143,7 +183,7 @@ void State::process()
 	m_map.updateShadows();
 	m_map.recalcCellValues();
 	evaluate();
-	std::cerr << "Base value = " << m_value << std::endl;
+	//std::cerr << "Base value = " << m_value << std::endl;
 	
 	std::priority_queue<State *, std::vector<State *>, StateCmp> searchQueue;
 	State *root = State::create(*this);
@@ -165,6 +205,8 @@ void State::process()
 		}
 		
 		if (node->m_day - m_day >= depth) { break; }
+		
+		Configuration bestConf(node->m_day);
 		
 		for (Tree &tree: node->m_map.myTrees()) {
 			int cost = node->growCost(tree);
@@ -195,17 +237,19 @@ void State::process()
 				}
 			}
 			
-			cost = m_completeCost;
-			if (tree.canComplete() && node->m_sun >= cost) {
-				State *nextNode = State::create(*node);
-				nextNode->m_map.completeTreeAt(cellIndex);
-				nextNode->m_map.updateShadows();
-				nextNode->m_score += nextNode->m_map.richnessPoints(cellIndex) + nextNode->m_nutrients;
-				nextNode->m_nutrients--;
-				nextNode->m_sun -= cost;
-				nextNode->evaluate();
-				nextNode->addAction(Action(Action::Complete, cellIndex));
-				searchQueue.push(nextNode);
+			if (Configuration(node->m_map.myTrees()).achieved(bestConf)) {
+				cost = m_completeCost;
+				if (tree.canComplete() && node->m_sun >= cost) {
+					State *nextNode = State::create(*node);
+					nextNode->m_map.completeTreeAt(cellIndex);
+					nextNode->m_map.updateShadows();
+					nextNode->m_score += nextNode->m_map.richnessPoints(cellIndex) + nextNode->m_nutrients;
+					nextNode->m_nutrients--;
+					nextNode->m_sun -= cost;
+					nextNode->evaluate();
+					nextNode->addAction(Action(Action::Complete, cellIndex));
+					searchQueue.push(nextNode);
+				}
 			}
 		}
 		
@@ -219,11 +263,11 @@ void State::process()
 	}
 	
 	Action action = (node && !node->actions.empty()) ? node->actions.front() : Action();
-	std::cout << action.toStr() << std::endl;
+	std::cout << action.toStr() << std::endl; 
+		/*<< " " << statictics.completedTrees << " " << statictics.firstCompleteTurn << " "
+		<< statictics.soilPoints  << " "
+		<< statictics.sunTreesBySize[0] << " " << statictics.treesOfSize[0] << " "
+		<< statictics.sunTreesBySize[1] << " " << statictics.treesOfSize[1] << " "
+		<< statictics.sunTreesBySize[2] << " " << statictics.treesOfSize[2] << std::endl; */
 	
-}
-
-void State::apply(Action action)
-{
-	std::cout << action.toStr() << std::endl;
 }

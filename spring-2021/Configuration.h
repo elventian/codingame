@@ -15,11 +15,12 @@ public:
 		}
 	}
 	Configuration(int m_day) {
-		(void)m_day;
-		m_treesBySize[0] = 1;
-		m_treesBySize[1] = 3;
-		m_treesBySize[2] = 3;
-		m_treesBySize[3] = 3;
+		if (m_day < 13) {
+			m_treesBySize[0] = 1; m_treesBySize[1] = 1; m_treesBySize[2] = 2; m_treesBySize[3] = 4;
+		}
+		else {
+			m_treesBySize[0] = 0; m_treesBySize[1] = 0; m_treesBySize[2] = 0; m_treesBySize[3] = 4;
+		}
 	}
 	Configuration operator-(const Configuration &other) {
 		Configuration res;
@@ -27,6 +28,32 @@ public:
 			res.m_treesBySize[i] = m_treesBySize[i] - other.m_treesBySize[i];
 		}
 		return res;
+	}
+	int extraTrees(const Configuration &other) {
+		int res = 0;
+		for (int i = 0; i < Tree::maxSize + 1; i++) {
+			int diff = m_treesBySize[i] - other.m_treesBySize[i];
+			if (diff > 0) { res += diff; }
+		}
+		return res;
+	}
+	bool achieved(const Configuration &other) {
+		for (int i = 0; i < Tree::maxSize + 1; i++) {
+			if (other.m_treesBySize[i] - m_treesBySize[i] > 0) { return false; }
+		}
+		return true;
+	}
+	int actionsToAchieve(const Configuration &other) {
+		int reqTrees = 0;
+		int actions = 0;
+		for (int i = Tree::maxSize; i >= 0; i--) {
+			int diff = other.m_treesBySize[i] - m_treesBySize[i] + reqTrees;
+			if (diff > 0) {
+				actions += diff;
+				reqTrees = diff;
+			}
+		}
+		return actions;
 	}
 	int treesOfSize(int size) const {
 		return m_treesBySize[size];

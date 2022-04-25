@@ -49,7 +49,6 @@ private:
 	int completeCost(const Tree *tree) const;
 	int treesNum(int treeSize) const;
 	void evaluate();
-	void apply(Action action);
 	void addAction(Action action) { actions.push_back(action); }
 	
 };
