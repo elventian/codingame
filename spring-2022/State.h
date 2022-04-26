@@ -26,6 +26,8 @@ protected:
 	std::vector<Monster *> m_monsters;
 	
 	void clear();
+	void applyOffenceStrategy(Unit *unit);
+	void applyDefenceStrategy(Unit *unit);
 };
 
 #endif // STATE_H

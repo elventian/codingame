@@ -9,11 +9,9 @@ State::State(std::istream &in)
 	int base_x; // The corner of the map representing your base
 	int base_y;
 	in >> base_x >> base_y; in.ignore();
-	std::cerr << base_x << " " << base_y << std::endl;
 	m_base = Coord2(base_x, base_y);
 	m_opbase = mapSize - m_base;
 	in >> m_unitsNum; in.ignore();
-	std::cerr << m_unitsNum << std::endl;
 }
 
 void State::read(std::istream &in)
@@ -62,25 +60,13 @@ void State::process()
 	std::sort(m_monsters.begin(), m_monsters.end(), [this] (Monster *m1, Monster *m2) {
 		return m1->pos().squaredDist(m_base) < m2->pos().squaredDist(m_base);
 	});
-
-	for (int i = 0; i < m_unitsNum; i++) {
-		bool action_done = false;
-		if (m_monsters.empty()) { std::cout << "WAIT" << std::endl; action_done = true; }
-		else if (m_mana >= 10) {
-			for (Monster *m: m_monsters) {
-				if (m_units[i]->distance(m) <= 1280) {
-					std::cout << "SPELL WIND " << m_opbase.x() << " " << m_opbase.y() << std::endl;
-					m_mana -= 10;
-					action_done = true;
-					break;
-				}
-			}
-		}
-		if (!action_done) { 
-			std::cout << "MOVE " << m_monsters.front()->pos().x() << " " << m_monsters.front()->pos().y() << std::endl;
-			m_monsters.erase(m_monsters.begin());
-			action_done = true;
-		}
+	
+	applyOffenceStrategy(m_units[0]);
+	applyDefenceStrategy(m_units[1]);
+	applyDefenceStrategy(m_units[2]);
+	
+	for (Unit *u: m_units) {
+		u->revealAction();
 	}
 }
 
@@ -92,4 +78,29 @@ void State::clear()
 	m_units.clear();
 	m_opunits.clear();
 	m_monsters.clear();
+}
+
+void State::applyOffenceStrategy(Unit *unit)
+{
+	unit->setAction(Action(Action::Move, Coord2(12000, 5000)));
+}
+
+void State::applyDefenceStrategy(Unit *unit)
+{
+	if (!m_monsters.empty()) {
+		if (m_mana >= 10) {
+			for (Monster *m: m_monsters) {
+				if (unit->distance(m) <= Action::applyRange(Action::Wind)) {
+					unit->setAction(Action(Action::Wind, m_opbase));
+					m_mana -= 10;
+					break;
+				}
+			}
+		}
+		
+		if (unit->isIdle()) {
+			unit->setAction(Action(Action::Move, m_monsters.front()->pos()));
+			m_monsters.erase(m_monsters.begin());
+		}
+	}
 }

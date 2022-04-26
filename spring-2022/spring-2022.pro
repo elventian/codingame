@@ -14,6 +14,7 @@ HEADERS += \
     State.h \
 	../grid2d/Coord2.h \
     Unit.h \
-    Monster.h
+    Monster.h \
+    Action.h
 
 INCLUDEPATH += ../grid2d/
